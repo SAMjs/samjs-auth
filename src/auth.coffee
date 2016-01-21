@@ -29,15 +29,17 @@ module.exports = (samjs) ->
             allowed += 1 if callPermissionChecker(permission,user,checker)
           return (allowed == permissionChecker.length)
         else if samjs.util.isString(permissionChecker)
+          unless @permissionCheckers[permissionChecker]?
+            throw new Error("#{permissionChecker} not defined")
           return @permissionCheckers[permissionChecker](permission, user)
         else if samjs.util.isFunction(permissionChecker)
           return permissionChecker(permission, user)
         return false
-      isAllowed = (client,mode,permissionCheckers) ->
-        throw new Error("no permission") unless permission = @[mode]
-        throw new Error("invalid socket - no auth") unless client?.auth?.getUser?
+      isAllowed = (client,permission,permissionCheckers) ->
+        throw new Error("no permission") unless permission?
+        throw new Error("invalid socket - no auth") unless client.auth?
         throw new Error("not logged in") unless user = client.auth.getUser()
-        return if callPermissionChecker(permission,user)
+        return if callPermissionChecker(permission,user,permissionCheckers)
         throw new Error("no permission")
       @isAllowed = isAllowed
       @configs = [{
@@ -45,20 +47,35 @@ module.exports = (samjs) ->
           isRequired: true
           read: ["root"]
           write: ["root"]
-          test: (users) -> new samjs.Promise (resolve,reject) ->
+          test: (users, oldUsers) -> new samjs.Promise (resolve,reject) ->
             if users? and samjs.util.isArray(users) and users.length > 0
               for user in users
-                unless user[samjs.options.username]? and user[samjs.options.password]?
-                  reject(new Error ("Username and password required"))
+                unless user[samjs.options.username]?
+                  reject(new Error ("Username for all users required"))
                   return
+                unless user[samjs.options.password]?
+                  found = false
+                  if oldUsers?
+                    for oldUser in oldUsers
+                      if oldUser[samjs.options.username] == user[samjs.options.username]
+                        found = true
+                        break
+                  unless found
+                    reject(new Error ("Password for all users required"))
+                    return
               resolve()
             else
               reject()
           hooks:
-            before_Set: ({data}) =>
+            before_Set: ({data,oldData}) =>
               return new samjs.Promise (resolve, reject) =>
                 promises = []
                 for user in data
+                  unless user[samjs.options.password]
+                    for oldUser in oldData
+                      if oldUser[samjs.options.username] == user[samjs.options.username]
+                        user[samjs.options.password] = oldUser[samjs.options.password]
+                        user.hashed = oldUser.hashed
                   unless user.hashed
                     promise = new samjs.Promise (resolve, reject) =>
                       try
@@ -69,20 +86,29 @@ module.exports = (samjs) ->
                 samjs.Promise.all(promises)
                 .then -> resolve data: data
                 .catch reject
+            after_Get: (users) ->
+              newUsers = []
+              for user in users
+                newUser = samjs.helper.clone user
+                delete newUser[samjs.options.password]
+                delete newUser.hashed
+                newUsers.push newUser
+              return newUsers
+
         }]
       @hooks = configs:
         beforeTest: ({data, client}) ->
-          isAllowed.bind(@)(client,"write")
+          isAllowed(client,@write,@permissionCheckers)
           return data: data, client:client
         beforeGet: ({client}) ->
-          isAllowed.bind(@)(client,"read")
+          isAllowed(client,@read,@permissionCheckers)
           return client: client
         beforeSet: ({data, client}) ->
-          isAllowed.bind(@)(client,"write")
+          isAllowed(client,@write,@permissionCheckers)
           return data: data, client:client
       @interfaces = auth: require("./interface")(samjs,@)
     findUser: (name) ->
-      samjs.configs.users._get()
+      samjs.configs.users._getBare()
       .then (users) ->
         if users?
           for user in users

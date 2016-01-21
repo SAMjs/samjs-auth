@@ -7,6 +7,6 @@ module.exports = (samjs) ->
   plugin.options = auth.options
   plugin.configs = auth.configs
   plugin.hooks = auth.hooks
-  plugin.startup = -> auth.startup()
+  plugin.startup = auth.startup
   plugin.interfaces = auth.interfaces
   return plugin
