@@ -1,7 +1,7 @@
 {
   "name": "samjs-auth",
   "description": "",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "repository": "https://github.com/SAMjs/samjs-auth",
   "author": {
     "name": "Paul Pflugradt",
