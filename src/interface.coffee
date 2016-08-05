@@ -29,6 +29,7 @@ module.exports = (samjs, auth) ->
           success = true
           socket.client.auth.user = user
           socket.client.auth.token = token
+          auth.callAfterAuthHooks(user)
         socket.emit "auth.byToken."+request.token,
           {success: success, content: content}
     socket.on "auth", (request) ->
@@ -38,11 +39,11 @@ module.exports = (samjs, auth) ->
           request.token?
         auth.findUser(request.content[samjs.options.username])
         .then (user) ->
+          throw new Error "user not found" unless user?
           auth.comparePassword user, request.content[samjs.options.password]
         .then (user) ->
           return auth.crypto.generateToken samjs.options.tokenSize
           .then (token) ->
-            success = true
             content = samjs.helper.clone user
             content.token = token
             delete content[samjs.options.password]
@@ -55,9 +56,10 @@ module.exports = (samjs, auth) ->
             tokenStore[token].resetLongTimeout()
             socket.client.auth.user = user
             socket.client.auth.token = token
+            auth.callAfterAuthHooks(user)
             return content
         .then (content) -> success:true,  content: content
-        .catch (e) ->      success:false, content: false
+        .catch (e) ->      success:false, content: e.message
         .then (response) ->
           socket.emit "auth."+request.token, response
       else

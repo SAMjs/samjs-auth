@@ -20,7 +20,7 @@ describe "samjs", ->
       samjs.reset()
       .plugins(samjsAuth)
       .options({config:testConfigFile})
-      .configs({name:"testConfig",read:true,write:true})
+      .configs({name:"testConfig",read:"root",write:"root"})
       .models()
       opt = samjs.configs.testConfig
       done()
@@ -33,7 +33,6 @@ describe "samjs", ->
     describe "configs", ->
       it "should reject get", (done) ->
         opt.get()
-        .then console.log
         .catch -> done()
       it "should reject set", (done) ->
         opt.set()
@@ -44,20 +43,20 @@ describe "samjs", ->
       it "should have users config", ->
         should.exist(samjs.configs.users)
     describe "startup", ->
-      it "should not configure when false user is supplied", (done) ->
+      it "should not configure when no password is supplied", (done) ->
         samjs.startup().io.listen(port)
         client = samjsClient({
           url: url
           ioOpts:
             autoConnect: false
           })().plugins(samjsAuthClient)
-        client.install.onceInConfigMode
-        .return client.auth.createRoot name:"root"
+        client.install.onceConfigure
+        .return client.auth.createRoot()
         .catch (e) ->
           e.message.should.equal "Password for all users required"
           done()
       it "should configure", (done) ->
-        client.auth.createRoot name:"root",pwd:"rootroot"
+        client.auth.createRoot "rootroot"
         .then (response) ->
           should.not.exist response[0].pwd
           done()
@@ -71,12 +70,12 @@ describe "samjs", ->
       it "should reject config.set", (done) ->
         client.config.set("testConfig","value")
         .catch (e) ->
-          e.message.should.equal "not logged in"
+          e.message.should.equal "no permission"
           done()
       it "should reject config.get", (done) ->
         client.config.get("testConfig")
         .catch (e) ->
-          e.message.should.equal "not logged in"
+          e.message.should.equal "no permission"
           done()
       it "should auth", (done) ->
 
