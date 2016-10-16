@@ -1,5 +1,6 @@
 chai = require "chai"
 should = chai.should()
+chai.use require "chai-as-promised"
 samjs = require "samjs"
 samjsAuth = require("../src/main")
 samjsClient = require "samjs-client"
@@ -13,7 +14,7 @@ testConfigFile = "test/testConfig.json"
 describe "samjs", ->
   client = null
   opt = null
-  before (done) ->
+  before ->
     fs.unlinkAsync testConfigFile
     .catch -> return true
     .finally ->
@@ -23,27 +24,21 @@ describe "samjs", ->
       .configs({name:"testConfig",read:"root",write:"root"})
       .models()
       opt = samjs.configs.testConfig
-      done()
-
-
 
   describe "auth", ->
     opt = null
     users = null
     describe "configs", ->
-      it "should reject get", (done) ->
-        opt.get()
-        .catch -> done()
-      it "should reject set", (done) ->
-        opt.set()
-        .catch -> done()
-      it "should reject test", (done) ->
-        opt.test()
-        .catch -> done()
+      it "should reject get", ->
+        opt.get().should.be.rejected
+      it "should reject set", ->
+        opt.set().should.be.rejected
+      it "should reject test", ->
+        opt.test().should.be.rejected
       it "should have users config", ->
         should.exist(samjs.configs.users)
     describe "startup", ->
-      it "should not configure when no password is supplied", (done) ->
+      it "should not configure when no password is supplied",  ->
         samjs.startup().io.listen(port)
         client = samjsClient({
           url: url
@@ -52,50 +47,39 @@ describe "samjs", ->
           })().plugins(samjsAuthClient)
         client.install.onceConfigure
         .return client.auth.createRoot()
-        .catch (e) ->
-          e.message.should.equal "Password for all users required"
-          done()
-      it "should configure", (done) ->
+        .should.be.rejected
+      it "should configure", ->
         client.auth.createRoot "rootroot"
         .then (response) ->
           should.not.exist response[0].pwd
-          done()
-        .catch done
       it "should be started up", (done) ->
         @timeout(2000)
         samjs.state.onceStarted
         .then ->
           client.io.socket.once "reconnect", -> done()
         .catch done
-      it "should reject config.set", (done) ->
+        return null
+      it "should reject config.set", ->
         client.config.set("testConfig","value")
-        .catch (e) ->
-          e.message.should.equal "no permission"
-          done()
-      it "should reject config.get", (done) ->
+        .should.be.rejected
+      it "should reject config.get", ->
         client.config.get("testConfig")
-        .catch (e) ->
-          e.message.should.equal "no permission"
-          done()
-      it "should auth", (done) ->
-
+        .should.be.rejected
+      it "should auth", ->
         client.auth.login {name:"root",pwd:"rootroot"}
         .then (result) ->
           result.name.should.equal "root"
-          done()
-        .catch done
+
       describe "once authenticated", ->
-        it "should config.set", (done) ->
+        it "should config.set", ->
           client.config.set("testConfig","value")
-          .then -> done()
-          .catch done
-        it "should config.get", (done) ->
+
+        it "should config.get",  ->
           client.config.get("testConfig")
           .then (result) ->
             result.should.equal "value"
-            done()
-          .catch done
-        it "should be able to add a user", (done) ->
+
+        it "should be able to add a user",  ->
           client.config.get("users")
           .then (result) ->
             result[0].name.should.equal "root"
@@ -110,9 +94,8 @@ describe "samjs", ->
             should.exist result[1].hashed
             should.exist result[0].pwd
             should.exist result[1].hashed
-            done()
-          .catch done
-        it "should be able to remove a user", (done) ->
+
+        it "should be able to remove a user",  ->
           client.config.get("users")
           .then (result) ->
             result[1].name.should.equal "root2"
@@ -124,15 +107,10 @@ describe "samjs", ->
             should.exist result[0].pwd
             should.exist result[0].hashed
             should.not.exist result[1]
-            done()
-          .catch done
-  after (done) ->
+  after ->
     if samjs.shutdown?
       if samjs.models.users?
         model = samjs.models.users?.dbModel
-        model.remove {group:"root"}
-        .then -> done()
+        return model.remove {group:"root"}
       else
-        samjs.shutdown().then -> done()
-    else
-      done()
+        return samjs.shutdown()

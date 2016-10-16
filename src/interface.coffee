@@ -59,7 +59,7 @@ module.exports = (samjs, auth) ->
             auth.callAfterAuthHooks(user)
             return content
         .then (content) -> success:true,  content: content
-        .catch (e) ->      success:false, content: e.message
+        .catch (e) ->      success:false, content: e?.message
         .then (response) ->
           socket.emit "auth."+request.token, response
       else
