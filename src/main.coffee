@@ -147,20 +147,17 @@ module.exports = (samjs) ->
           for user in users
             if user[samjs.options.username] == name
               return user
+    userConverter: (user) -> samjs.helper.clone(user)
     afterAuth: []
     callAfterAuthHooks: (user) ->
       for authHook in @afterAuth
         authHook(user)
-    replaceUserHandler: (findUserFunc) =>
+    replaceUserHandler: (findUserFunc, userConverter) =>
       @findUser = findUserFunc
+      @userConverter = userConverter if userConverter?
       delete @configs
     comparePassword: (user, providedPassword) =>
       return @crypto.comparePassword providedPassword, user[samjs.options.password]
         .then -> return user
     debug: (name) ->
       samjs.debug("auth:#{name}")
-    startup: ->
-      debug "adding auth property to clients"
-      samjs.io.use (socket,next) ->
-        socket.client.auth ?= {}
-        next()
