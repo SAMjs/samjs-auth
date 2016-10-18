@@ -1,7 +1,37 @@
 # out: ../lib/interface.js
 module.exports = (samjs, auth) ->
-  tokenStore = {}
+  if auth.develop
+    getUserByToken = (token) ->
+      samjs.configs.tokenStore._get()
+      .then (value) -> return value && value[token]
+    setTokenForUser = (token, user) ->
+      samjs.configs.tokenStore._get()
+      .then (value) ->
+        value ?= {}
+        value[token] = {user:user}
+        return value
+      .then samjs.configs.tokenStore._set
+  else
+    tokenStore = {}
+    getUserByToken = (token) ->
+      samjs.Promise.resolve(tokenStore[token]).then (storedItem) ->
+        if storedItem?
+          if storedItem.removeTimeout
+            storedItem.removeTimeout()
+          storedItem.resetLongTimeout()
+    setTokenForUser = (token, user) ->
+      tokenStore[token] = {user:user}
+      tokenStore[token].resetLongTimeout = () ->
+        if timoutObj
+          clearTimeout(timoutObj)
+        timoutObj = setTimeout (() -> delete tokenStore[token]),
+          samjs.options.tokenExpiration*50
+      tokenStore[token].resetLongTimeout()
 
+
+
+
+    storedItem = tokenStore[token]
   return (socket) ->
     socket.on "disconnect", () ->
       if socket.client?.auth?.token?
@@ -18,21 +48,19 @@ module.exports = (samjs, auth) ->
       content = false
       if request? and request.token? and request.content?
         token = request.content
-        storedItem = tokenStore[token]
-        if storedItem
-          if storedItem.removeTimeout
-            storedItem.removeTimeout()
-          storedItem.resetLongTimeout()
-          user = storedItem.user
-          content = auth.userConverter(user)
-          delete content[samjs.options.password]
-          success = true
-          socket.client.auth ?= {}
-          socket.client.auth.user = user
-          socket.client.auth.token = token
-          auth.callAfterAuthHooks(user)
-        socket.emit "auth.byToken."+request.token,
-          {success: success, content: content}
+        getUserByToken(token)
+        .then (storedItem) ->
+          if storedItem
+            user = storedItem.user
+            content = auth.userConverter(user)
+            delete content[samjs.options.password]
+            success = true
+            socket.client.auth ?= {}
+            socket.client.auth.user = user
+            socket.client.auth.token = token
+            auth.callAfterAuthHooks(user)
+          socket.emit "auth.byToken."+request.token,
+            {success: success, content: content}
     socket.on "auth", (request) ->
       if request? and request.content? and
           request.content[samjs.options.username]? and
@@ -40,22 +68,15 @@ module.exports = (samjs, auth) ->
           request.token?
         auth.findUser(request.content[samjs.options.username])
         .then (user) ->
-          console.log user
           throw new Error "user not found" unless user?
           auth.comparePassword user, request.content[samjs.options.password]
         .then (user) ->
-          return auth.crypto.generateToken samjs.options.tokenSize
+          return samjs.helper.generateToken samjs.options.tokenSize
           .then (token) ->
             content = auth.userConverter(user)
             content.token = token
             delete content[samjs.options.password]
-            tokenStore[token] = {user:user}
-            tokenStore[token].resetLongTimeout = () ->
-              if timoutObj
-                clearTimeout(timoutObj)
-              timoutObj = setTimeout (() -> delete tokenStore[token]),
-                samjs.options.tokenExpiration*50
-            tokenStore[token].resetLongTimeout()
+            setTokenForUser(token, user)
             socket.client.auth ?= {}
             socket.client.auth.user = user
             socket.client.auth.token = token

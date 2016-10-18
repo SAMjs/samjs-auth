@@ -15,7 +15,7 @@ npm install --save-dev samjs-auth-client
 ```js
 // server-side
 samjs
-.plugins(require("samjs-auth"))
+.plugins(require("samjs-auth")({dev:process.env.NODE_ENV !== "production")})
 .options()
 .configs({name:"item", read:true ,write:"root"})
 .models()

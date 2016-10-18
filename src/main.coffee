@@ -1,10 +1,11 @@
 # out: ../lib/main.js
-module.exports = (samjs) ->
+module.exports = (options) -> (samjs) ->
   debug = samjs.debug("auth")
   return new class Auth
     constructor: ->
       @crypto = require("./crypto")(samjs)
       @name = "auth"
+      @develop = options.dev
       @options =
         saltWorkFactor: 10
         tokenExpiration: 1000*60*30 # 30 minutes
@@ -129,6 +130,10 @@ module.exports = (samjs) ->
               return newUsers
 
         }]
+      if @develop
+        @configs.push {
+          name: "tokenStore"
+        }
       @hooks = configs:
         beforeTest: ({data, client}) ->
           isAllowed(client,@write,@permissionChecker)
@@ -155,7 +160,9 @@ module.exports = (samjs) ->
     replaceUserHandler: (findUserFunc, userConverter) =>
       @findUser = findUserFunc
       @userConverter = userConverter if userConverter?
-      delete @configs
+      @configs.shift()
+      if @configs.length == 0
+        delete @configs
     comparePassword: (user, providedPassword) =>
       return @crypto.comparePassword providedPassword, user[samjs.options.password]
         .then -> return user

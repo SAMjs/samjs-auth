@@ -1,5 +1,5 @@
 # out: ../lib/crypto.js
-{randomBytes} = require("crypto")
+
 module.exports = (samjs) ->
   bcrypt = samjs.Promise.promisifyAll(require("bcryptjs"))
   return new class Crypto
@@ -19,9 +19,3 @@ module.exports = (samjs) ->
             resolve()
           else
             reject()
-    generateToken: (size) ->
-      return new samjs.Promise (resolve, reject) ->
-        try
-          resolve(randomBytes(size).toString("base64"))
-        catch
-          reject()
