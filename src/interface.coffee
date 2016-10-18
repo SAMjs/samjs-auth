@@ -19,6 +19,7 @@ module.exports = (samjs, auth) ->
           if storedItem.removeTimeout
             storedItem.removeTimeout()
           storedItem.resetLongTimeout()
+        return storedItem
     setTokenForUser = (token, user) ->
       tokenStore[token] = {user:user}
       tokenStore[token].resetLongTimeout = () ->
@@ -28,15 +29,11 @@ module.exports = (samjs, auth) ->
           samjs.options.tokenExpiration*50
       tokenStore[token].resetLongTimeout()
 
-
-
-
-    storedItem = tokenStore[token]
   return (socket) ->
     socket.on "disconnect", () ->
       if socket.client?.auth?.token?
         token = socket.client.auth.token
-        if tokenStore[token]
+        if tokenStore?[token]
           timoutObj = setTimeout (() -> delete tokenStore[token]),
             samjs.options.tokenExpiration
           if tokenStore[token].removeTimeout
