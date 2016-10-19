@@ -1,6 +1,7 @@
 # out: ../lib/main.js
 module.exports = (options) -> (samjs) ->
   debug = samjs.debug("auth")
+  options ?= {}
   return new class Auth
     constructor: ->
       @crypto = require("./crypto")(samjs)

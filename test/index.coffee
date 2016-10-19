@@ -19,7 +19,7 @@ describe "samjs", ->
     .catch -> return true
     .finally ->
       samjs.reset()
-      .plugins(samjsAuth)
+      .plugins(samjsAuth())
       .options({config:testConfigFile})
       .configs({name:"testConfig",read:"root",write:"root"})
       .models()
