@@ -5,6 +5,8 @@ module.exports = (options) -> (samjs) ->
   return new class Auth
     constructor: ->
       @crypto = require("./crypto")(samjs)
+      samjs.helper.initiateHooks @, [], ["afterLogin","afterLogout"]
+      @hooksObj = @
       @name = "auth"
       @develop = options.dev
       @options =
@@ -154,16 +156,15 @@ module.exports = (options) -> (samjs) ->
             if user[samjs.options.username] == name
               return user
     userConverter: (user) -> samjs.helper.clone(user)
-    afterAuth: []
-    callAfterAuthHooks: (user) ->
-      for authHook in @afterAuth
-        authHook(user)
     replaceUserHandler: (findUserFunc, userConverter) =>
       @findUser = findUserFunc
       @userConverter = userConverter if userConverter?
       @configs.shift()
       if @configs.length == 0
         delete @configs
+    replaceHooks: (hooksObj) =>
+      @hooksObj = hooksObj
+
     comparePassword: (user, providedPassword) =>
       return @crypto.comparePassword providedPassword, user[samjs.options.password]
         .then -> return user

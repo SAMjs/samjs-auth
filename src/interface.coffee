@@ -40,6 +40,7 @@ module.exports = (samjs, auth) ->
             tokenStore[token].removeTimeout()
           tokenStore[token].removeTimeout = () ->
             clearTimeout(timoutObj)
+
     socket.on "auth.byToken", (request) ->
       success = false
       content = false
@@ -55,7 +56,7 @@ module.exports = (samjs, auth) ->
             socket.client.auth ?= {}
             socket.client.auth.user = user
             socket.client.auth.token = token
-            auth.callAfterAuthHooks(user)
+            auth.hooksObj._hooks.afterLogin(socket: socket, user: user)
           socket.emit "auth.byToken."+request.token,
             {success: success, content: content}
     socket.on "auth", (request) ->
@@ -77,7 +78,7 @@ module.exports = (samjs, auth) ->
             socket.client.auth ?= {}
             socket.client.auth.user = user
             socket.client.auth.token = token
-            auth.callAfterAuthHooks(user)
+            auth.hooksObj._hooks.afterLogin(socket: socket, user: user)
             return content
         .then (content) -> success:true,  content: content
         .catch (e) ->      success:false, content: e?.message
