@@ -6,7 +6,6 @@ module.exports = (options) -> (samjs) ->
     constructor: ->
       @crypto = require("./crypto")(samjs)
       samjs.helper.initiateHooks @, [], ["afterLogin","afterLogout"]
-      @hooksObj = @
       @name = "auth"
       @develop = options.dev
       @options =
@@ -162,9 +161,6 @@ module.exports = (options) -> (samjs) ->
       @configs.shift()
       if @configs.length == 0
         delete @configs
-    replaceHooks: (hooksObj) =>
-      @hooksObj = hooksObj
-
     comparePassword: (user, providedPassword) =>
       return @crypto.comparePassword providedPassword, user[samjs.options.password]
         .then -> return user
