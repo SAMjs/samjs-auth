@@ -1,7 +1,9 @@
 # out: ../lib/main.js
+path = require "path"
 module.exports = (options) -> (samjs) ->
   debug = samjs.debug("auth")
   options ?= {}
+  options.dev ?= process.env.NODE_ENV != "production"
   return new class Auth
     constructor: ->
       @crypto = require("./crypto")(samjs)
@@ -62,6 +64,9 @@ module.exports = (options) -> (samjs) ->
       @getAllowance = getAllowance
       @configs = [{
           name: "users"
+          installComp:
+            paths: [path.resolve(__dirname, "./createUser")]
+            icons: ["material-person","material-vpn_key"]
           isRequired: true
           test: (users, oldUsers) -> new samjs.Promise (resolve,reject) ->
             if users? and samjs.util.isArray(users) and users.length > 0
