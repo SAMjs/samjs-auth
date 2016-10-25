@@ -54,9 +54,9 @@ module.exports = (options) -> (samjs) ->
         return "" if callPermissionChecker(permission,user,permissionChecker)
         return "no permission"
 
-      isAllowed = (client,permission,permissionChecker) ->
-        throw new Error "invalid socket - no auth" unless client.auth?
-        result = getAllowance(client.auth.user,permission,permissionChecker)
+      isAllowed = (socket,permission,permissionChecker) ->
+        throw new Error "invalid socket - no auth" unless socket.client?.auth?
+        result = getAllowance(socket.client.auth.user,permission,permissionChecker)
         return true if result == ""
         throw new Error(result)
 
@@ -142,15 +142,15 @@ module.exports = (options) -> (samjs) ->
           name: "tokenStore"
         }
       @hooks = configs:
-        beforeTest: ({data, client}) ->
-          isAllowed(client,@write,@permissionChecker)
-          return data: data, client:client
-        beforeGet: ({client}) ->
-          isAllowed(client,@read,@permissionChecker)
-          return client: client
-        beforeSet: ({data, client}) ->
-          isAllowed(client,@write,@permissionChecker)
-          return data: data, client:client
+        beforeTest: (obj) ->
+          isAllowed(obj.socket,@write,@permissionChecker)
+          return obj
+        beforeGet: (obj) ->
+          isAllowed(obj.socket,@read,@permissionChecker)
+          return obj
+        beforeSet: (obj) ->
+          isAllowed(obj.socket,@write,@permissionChecker)
+          return obj
       @interfaces = auth: require("./interface")(samjs,@)
     findUser: (name) ->
       samjs.configs.users._getBare()
