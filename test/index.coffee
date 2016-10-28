@@ -21,7 +21,7 @@ describe "samjs", ->
       samjs.reset()
       .plugins(samjsAuth())
       .options({config:testConfigFile})
-      .configs({name:"testConfig",read:"root",write:"root"})
+      .configs({name:"testConfig",access:{read:"root",write:"root"}})
       .models()
       opt = samjs.configs.testConfig
 

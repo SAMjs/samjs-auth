@@ -20,7 +20,12 @@ module.exports = (options) -> (samjs) ->
         permissionChecker: "containsUser"
 
       @permissionCheckers =
-        containsUser: (permission, user) ->
+        containsUser: (permission, user, getIdentifier) ->
+          if getIdentifier
+            if user?
+              return user[samjs.options.username]
+            else
+              return "__public"
           if permission == true
             return true
           else if user?
@@ -29,6 +34,7 @@ module.exports = (options) -> (samjs) ->
             else if samjs.util.isArray(permission)
               return true if permission.indexOf(user[samjs.options.username]) > -1
           return false
+
 
       callPermissionChecker = (permission, user, permissionChecker) =>
         permissionChecker ?= samjs.options.permissionChecker
@@ -54,6 +60,17 @@ module.exports = (options) -> (samjs) ->
         return "" if callPermissionChecker(permission,user,permissionChecker)
         return "no permission"
 
+      getIdentifier = (user,permissionChecker) ->
+        permissionChecker ?= samjs.options.permissionChecker
+        if samjs.util.isArray(permissionChecker)
+          return user[samjs.options.username]
+        else if samjs.util.isString(permissionChecker)
+          unless @permissionCheckers[permissionChecker]?
+            throw new Error("#{permissionChecker} not defined")
+          return @permissionCheckers[permissionChecker](null, user, true)
+        else if samjs.util.isFunction(permissionChecker)
+          return permissionChecker(null, user, true)
+
       isAllowed = (socket,permission,permissionChecker) ->
         throw new Error "invalid socket - no auth" unless socket.client?.auth?
         result = getAllowance(socket.client.auth.user,permission,permissionChecker)
@@ -62,6 +79,7 @@ module.exports = (options) -> (samjs) ->
 
       @isAllowed = isAllowed
       @getAllowance = getAllowance
+      @getIdentifier = getIdentifier
       @configs = [{
           name: "users"
           installComp:
@@ -106,14 +124,15 @@ module.exports = (options) -> (samjs) ->
             return -> socket.removeAllListeners("auth.getInstallationInfo")
           hooks:
             afterCreate: (config) ->
-              config.read ?= [samjs.options.rootUser]
-              config.write ?= [samjs.options.rootUser]
-            before_Set: ({data,oldData}) =>
+              config.access.read ?= [samjs.options.rootUser]
+              config.access.write ?= [samjs.options.rootUser]
+              return config
+            before_Set: (obj) =>
               return new samjs.Promise (resolve, reject) =>
                 promises = []
-                for user in data
+                for user in obj.data
                   unless user[samjs.options.password]
-                    for oldUser in oldData
+                    for oldUser in obj.oldData
                       if oldUser[samjs.options.username] == user[samjs.options.username]
                         user[samjs.options.password] = oldUser[samjs.options.password]
                         user.hashed = oldUser.hashed
@@ -125,7 +144,7 @@ module.exports = (options) -> (samjs) ->
                         reject e
                     promises.push promise
                 samjs.Promise.all(promises)
-                .then -> resolve data: data
+                .then -> resolve obj
                 .catch reject
             after_Get: (users) ->
               newUsers = []
@@ -143,16 +162,17 @@ module.exports = (options) -> (samjs) ->
         }
       @hooks = configs:
         beforeTest: (obj) ->
-          isAllowed(obj.socket,@write,@permissionChecker)
+          isAllowed(obj.socket,@access.write,@permissionChecker)
           return obj
         beforeGet: (obj) ->
-          isAllowed(obj.socket,@read,@permissionChecker)
+          isAllowed(obj.socket,@access.read,@permissionChecker)
           return obj
         beforeSet: (obj) ->
-          isAllowed(obj.socket,@write,@permissionChecker)
+          isAllowed(obj.socket,@access.write,@permissionChecker)
           return obj
       @interfaces = auth: require("./interface")(samjs,@)
     findUser: (name) ->
+      console.log "finduser"
       samjs.configs.users._getBare()
       .then (users) ->
         if users?
@@ -171,3 +191,9 @@ module.exports = (options) -> (samjs) ->
         .then -> return user
     debug: (name) ->
       samjs.debug("auth:#{name}")
+    startup: (obj) ->
+      if samjs.io?
+        samjs.io.use (socket,next) ->
+          socket.client.auth ?= {}
+          next()
+      return obj
