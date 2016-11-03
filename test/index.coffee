@@ -17,13 +17,13 @@ describe "samjs", ->
   before ->
     fs.unlinkAsync testConfigFile
     .catch -> return true
-    .finally ->
-      samjs.reset()
-      .plugins(samjsAuth())
-      .options({config:testConfigFile})
-      .configs({name:"testConfig",access:{read:"root",write:"root"}})
-      .models()
-      opt = samjs.configs.testConfig
+    .then ->
+      samjs.reset().then ->
+        samjs.plugins(samjsAuth())
+        .options({config:testConfigFile})
+        .configs({name:"testConfig",access:{read:"root",write:"root"}})
+        .models()
+        opt = samjs.configs.testConfig
 
   describe "auth", ->
     opt = null
@@ -53,7 +53,7 @@ describe "samjs", ->
         .then (response) ->
           should.not.exist response[0].pwd
       it "should be started up", (done) ->
-        @timeout(2000)
+        @timeout(3000)
         samjs.state.onceStarted
         .then ->
           client.io.socket.once "reconnect", -> done()

@@ -17,17 +17,20 @@ module.exports = (options) -> (samjs) ->
         username: "name"
         password: "pwd"
         rootUser: "root"
-        permissionChecker: "containsUser"
+        authOptions:
+          authRequired: false
+          permissionChecker: "containsUser"
 
       @permissionCheckers =
-        containsUser: (permission, user, getIdentifier) ->
-          if getIdentifier
+        containsUser: (user, permission, options) ->
+          if options.getIdentifier
             if user?
               return user[samjs.options.username]
             else
               return "__public"
           if permission == true
-            return true
+            if !options.authRequired or user?
+              return true
           else if user?
             if samjs.util.isString(permission)
               return true if permission == user[samjs.options.username]
@@ -36,50 +39,47 @@ module.exports = (options) -> (samjs) ->
           return false
 
 
-      callPermissionChecker = (permission, user, permissionChecker) =>
-        permissionChecker ?= samjs.options.permissionChecker
-        if samjs.util.isArray(permissionChecker)
-          # any
-          for checker in permissionChecker
-            return true if callPermissionChecker(permission,user,checker)
-          # all
-          # allowed = 0
-          # for checker in permissionChecker
-          #   allowed += 1 if callPermissionChecker(permission,user,checker)
-          # return (allowed == permissionChecker.length)
-        else if samjs.util.isString(permissionChecker)
-          unless @permissionCheckers[permissionChecker]?
-            throw new Error("#{permissionChecker} not defined")
-          return @permissionCheckers[permissionChecker](permission, user)
-        else if samjs.util.isFunction(permissionChecker)
-          return permissionChecker(permission, user)
+      callPermissionChecker = (user, permission, options) =>
+        options ?= {}
+        pc = options.permissionChecker
+        pc ?= samjs.options.authOptions.permissionChecker
+        options.authRequired ?= samjs.options.authOptions.authRequired
+        if samjs.util.isArray(pc)
+          if options.getIdentifier
+            return user[samjs.options.username]
+          else if options.all
+            allowed = 0
+            for checker in pc
+              allowed += 1 if callPermissionChecker(user, permission,
+                Object.assign({permissionChecker:checker},options))
+            return (allowed == pc.length)
+          else
+            for checker in pc
+              return true if callPermissionChecker(user, permission,
+                Object.assign({permissionChecker:checker},options))
+
+        else if samjs.util.isString(pc)
+          unless @permissionCheckers[pc]?
+            throw new Error("#{pc} not defined")
+          return @permissionCheckers[pc](user, permission, options)
+        else if samjs.util.isFunction(pc)
+          return pc(user, permission, options)
         return false
 
-      getAllowance = (user,permission,permissionChecker) ->
+      getAllowance = (user, permission, options) ->
         return "no permission" unless permission?
-        return "" if callPermissionChecker(permission,user,permissionChecker)
+        return "" if callPermissionChecker(user, permission, options)
         return "no permission"
 
-      getIdentifier = (user,permissionChecker) ->
-        permissionChecker ?= samjs.options.permissionChecker
-        if samjs.util.isArray(permissionChecker)
-          return user[samjs.options.username]
-        else if samjs.util.isString(permissionChecker)
-          unless @permissionCheckers[permissionChecker]?
-            throw new Error("#{permissionChecker} not defined")
-          return @permissionCheckers[permissionChecker](null, user, true)
-        else if samjs.util.isFunction(permissionChecker)
-          return permissionChecker(null, user, true)
-
-      isAllowed = (socket,permission,permissionChecker) ->
+      isAllowed = (socket, permission, options) ->
         throw new Error "invalid socket - no auth" unless socket.client?.auth?
-        result = getAllowance(socket.client.auth.user,permission,permissionChecker)
+        result = getAllowance(socket.client.auth.user, permission, options)
         return true if result == ""
         throw new Error(result)
 
       @isAllowed = isAllowed
       @getAllowance = getAllowance
-      @getIdentifier = getIdentifier
+      @callPermissionChecker = callPermissionChecker
       @configs = [{
           name: "users"
           installComp:
@@ -162,17 +162,16 @@ module.exports = (options) -> (samjs) ->
         }
       @hooks = configs:
         beforeTest: (obj) ->
-          isAllowed(obj.socket,@access.write,@permissionChecker)
+          isAllowed(obj.socket,@access.write,@authOptions)
           return obj
         beforeGet: (obj) ->
-          isAllowed(obj.socket,@access.read,@permissionChecker)
+          isAllowed(obj.socket,@access.read,@authOptions)
           return obj
         beforeSet: (obj) ->
-          isAllowed(obj.socket,@access.write,@permissionChecker)
+          isAllowed(obj.socket,@access.write,@authOptions)
           return obj
       @interfaces = auth: require("./interface")(samjs,@)
     findUser: (name) ->
-      console.log "finduser"
       samjs.configs.users._getBare()
       .then (users) ->
         if users?
