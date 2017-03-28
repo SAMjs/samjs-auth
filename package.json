@@ -11,6 +11,9 @@
   "engines": {
     "node": "*"
   },
+  "files": [
+    "lib/"
+  ],
   "dependencies": {
     "bcryptjs": "^2.3.0"
   },

@@ -84,7 +84,7 @@ module.exports = (options) -> (samjs) ->
           name: "users"
           installComp:
             paths: [path.resolve(__dirname, "./createUser")]
-            icons: ["material-person","material-vpn_key"]
+            icons: ["ma-person","ma-vpn_key"]
           isRequired: true
           test: (users, oldUsers) -> new samjs.Promise (resolve,reject) ->
             if users? and samjs.util.isArray(users) and users.length > 0
