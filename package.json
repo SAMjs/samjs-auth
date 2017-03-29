@@ -31,8 +31,7 @@
     "samjs-auth-client": "^0.2.2",
     "samjs-client": "^0.2.2",
     "script-runner": "^0.1.6",
-    "vue-compiler": "^1.0.0",
-    "vue-html-loader": "^1.2.3"
+    "ceri-compiler": "^1.0.0"
   },
   "keywords": [],
   "readmeFilename": "README.md",
@@ -40,7 +39,7 @@
     "prebuild": "rimraf lib/",
     "build": "run-npm build:*",
     "build:coffee": "coffee --no-header --compile --output lib/ src/*.coffee",
-    "build:vue": "vue-compiler --out lib/ src/*.vue",
+    "build:ceri": "ceri-compiler --out lib/ lib/createUser.js",
     "test": "mocha",
     "dev": "coffee dev/server.coffee",
     "preversion": "npm test",
