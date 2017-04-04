@@ -46,7 +46,7 @@ describe "samjs", ->
             autoConnect: false
           })().plugins(samjsAuthClient)
         client.install.onceConfigure
-        .return client.auth.createRoot()
+        .then -> client.auth.createRoot()
         .should.be.rejected
       it "should configure", ->
         client.auth.createRoot "rootroot"

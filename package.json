@@ -28,7 +28,7 @@
     "pug": "^2.0.0-beta9",
     "rimraf": "^2.6.1",
     "samjs": "^0.3.1",
-    "samjs-auth-client": "^0.2.2",
+    "samjs-auth-client": "^0.3.0",
     "samjs-client": "^0.3.0",
     "script-runner": "^0.1.6",
     "ceri-compiler": "^1.0.6"
