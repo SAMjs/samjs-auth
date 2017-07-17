@@ -1,21 +1,12 @@
 # out: ../lib/crypto.js
-
-module.exports = (samjs) ->
-  bcrypt = samjs.Promise.promisifyAll(require("bcryptjs"))
-  return new class Crypto
-    generateHashedPassword: (user,next) ->
-      bcrypt.genSaltAsync samjs.options.saltWorkFactor
-      .then (salt) ->
-        return bcrypt.hashAsync user[samjs.options.password], salt
-      .then (hash) ->
-        user[samjs.options.password] = hash
-        user.hashed = true
-        next()
-    comparePassword: (providedPassword,realPassword) ->
-      return new samjs.Promise (resolve,reject) ->
-        bcrypt.compareAsync providedPassword, realPassword
-        .then (isMatch) ->
-          if isMatch
-            resolve()
-          else
-            reject()
+bcrypt = require "bcrypt"
+module.exports = ({options}) =>
+  generateHashedPassword: (user) =>
+    return if user.hashed
+    hash = await bcrypt.hash user[options.password], options.saltWorkFactor
+    user[options.password] = hash
+    user.hashed = true
+  comparePassword: (login, user) =>
+    isMatch = await bcrypt.compare login[options.password], user[options.password]
+    throw new Error "Wrong password" unless isMatch
+    return user

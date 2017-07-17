@@ -7,40 +7,44 @@
     "name": "Paul Pflugradt",
     "email": "paul.pflugradt@gmail.com"
   },
-  "main": "lib/main.js",
+  "main": "lib/index.js",
+  "browser": "client/index.js",
   "engines": {
     "node": "*"
   },
   "files": [
-    "lib/"
+    "lib/",
+    "client/"
   ],
   "dependencies": {
-    "bcryptjs": "^2.4.3"
+    "bcrypt": "^1.0.2",
+    "component-emitter": "^1.2.1"
   },
   "devDependencies": {
-    "atom-ui-reporter": "0.0.1",
-    "chai": "^3.5.0",
-    "chai-as-promised": "^6.0.0",
-    "chokidar": "^1.6.1",
-    "coffee-loader": "^0.7.3",
-    "coffee-script": "^1.12.4",
-    "mocha": "^3.2.0",
-    "pug": "^2.0.0-beta9",
+    "ceri-compiler": "^1.1.1",
+    "chai": "^4.1.0",
+    "chai-as-promised": "^7.1.1",
+    "chokidar": "^1.7.0",
+    "coffee-cli": "^0.2.1",
+    "coffeescript": "^2.0.0-beta3",
+    "mocha": "^3.4.2",
     "rimraf": "^2.6.1",
-    "samjs": "^0.3.1",
-    "samjs-auth-client": "^0.3.0",
+    "samjs": "^0.3.2",
+    "samjs-auth-client": "^0.3.1",
     "samjs-client": "^0.3.0",
-    "script-runner": "^0.1.6",
-    "ceri-compiler": "^1.0.6"
+    "script-runner": "^0.1.7",
+    "try-require-multiple": "^0.1.0"
   },
   "keywords": [],
   "readmeFilename": "README.md",
   "scripts": {
-    "prebuild": "rimraf lib/",
+    "prebuild": "rimraf lib/ client/",
     "build": "run-npm build:*",
-    "build:coffee": "coffee --no-header --compile --output lib/ src/*.coffee",
-    "build:ceri": "ceri-compiler --out lib/ lib/createUser.js",
+    "build:server": "coffee-cli --next --bare --no-header --compile --output lib/ src/*.coffee",
+    "build:client": "coffee-cli --no-header --compile --output client/ client-src/*.coffee",
+    "build:ceri": "ceri-compiler --out lib/ lib/create-user.js",
     "test": "mocha",
+    "watch": "mocha --watch",
     "dev": "coffee dev/server.coffee",
     "preversion": "npm test",
     "version": "npm run build && git add .",
